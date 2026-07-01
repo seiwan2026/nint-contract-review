@@ -678,6 +678,26 @@ body {
     font-family: "PingFang SC", "Microsoft YaHei", "Noto Serif SC", "SimSun", serif;
 }
 
+/* 条款锚点（可被跳转定位） */
+.clause-anchor {
+    scroll-margin-top: 20px;
+    transition: background 0.3s;
+}
+
+/* 审核意见中的条款引述链接 */
+.clause-link {
+    color: #6366f1;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color 0.15s;
+    font-weight: 500;
+}
+
+.clause-link:hover {
+    color: #4f46e5;
+}
+
 /* ===== Control Buttons ===== */
 .control-body {
     padding: 16px 20px 20px;

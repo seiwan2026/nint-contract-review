@@ -106,6 +106,165 @@
         updateChatStatus('general');
     }
 
+    // ===== 条款锚点与联动 =====
+
+    /**
+     * 给原始合同中的条款编号添加锚点（id="clause-N"）
+     * 匹配格式：第X条、第X.X条、X. 条款名 等
+     */
+    function addClauseAnchors() {
+        const container = document.getElementById('contractOriginalText');
+        if (!container) return;
+
+        // 匹配中文条款编号：第X条、第X章、数字. 等
+        const patterns = [
+            /(第[一二三四五六七八九十百千\d]+条[^<]*)/g,
+            /(第[一二三四五六七八九十百千\d]+章[^<]*)/g,
+            /(^\d+[\.\、]\s*[^\n<]+)/gm,
+        ];
+
+        let clauseIndex = 1;
+        let html = container.innerHTML;
+
+        // 用统一格式处理：给每条的首个条款引用加锚点
+        html = html.replace(/((?:第[一二三四五六七八九十百千\d]+条|第[一二三四五六七八九十百千\d]+章)[^<，。；\n]*)/g, function(match) {
+            return '<span class="clause-anchor" id="clause-' + (clauseIndex++) + '">' + match + '</span>';
+        });
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * 将审核意见中的条款引述转为可点击链接，点击后滚动到原始合同对应位置
+     * 匹配格式：第X条、条款：第X条 等
+     */
+    function linkClauseReferences(container) {
+        if (!container) return;
+
+        const originalBody = document.getElementById('contractOriginalText');
+        if (!originalBody) return;
+
+        // 收集原始合同中所有锚点
+        const anchors = originalBody.querySelectorAll('.clause-anchor');
+        if (anchors.length === 0) return;
+
+        // 构建条款编号 → 锚点ID 的映射
+        // e.g. "第一条" → "clause-1"
+        const clauseMap = {};
+        const chineseNums = '一二三四五六七八九十百千';
+        anchors.forEach(function(anchor, i) {
+            var text = anchor.textContent.trim();
+            // 提取条款编号
+            var match = text.match(/第([一二三四五六七八九十百千\d]+)[条章]/);
+            if (match) {
+                clauseMap[match[1]] = anchor.id;
+            }
+            // 也存数字索引
+            clauseMap[String(i + 1)] = anchor.id;
+        });
+
+        // 递归遍历审核意见中的文本节点，为条款引述包裹链接
+        function processNode(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                var text = node.textContent;
+                // 匹配条款引述：第X条、第X.X条，但不匹配已在链接内的
+                if (/第[一二三四五六七八九十百千\d]+条/.test(text)) {
+                    var fragment = document.createDocumentFragment();
+                    var lastIdx = 0;
+                    var regex = /第([一二三四五六七八九十百千\d]+)条/g;
+                    var m;
+                    while ((m = regex.exec(text)) !== null) {
+                        // 前面的普通文本
+                        if (m.index > lastIdx) {
+                            fragment.appendChild(document.createTextNode(text.slice(lastIdx, m.index)));
+                        }
+                        // 可点击的条款引述
+                        var link = document.createElement('span');
+                        link.className = 'clause-link';
+                        link.textContent = m[0];
+                        link.title = '点击跳转到原始合同对应条款';
+                        link.style.cssText = 'color:#6366f1;cursor:pointer;text-decoration:underline;text-underline-offset:2px;';
+                        (function(numeral) {
+                            link.addEventListener('click', function() {
+                                scrollToClause(numeral);
+                            });
+                        })(m[1]);
+                        link.addEventListener('mouseenter', function() {
+                            this.style.color = '#4f46e5';
+                        });
+                        link.addEventListener('mouseleave', function() {
+                            this.style.color = '#6366f1';
+                        });
+                        fragment.appendChild(link);
+                        lastIdx = m.index + m[0].length;
+                    }
+                    if (lastIdx < text.length) {
+                        fragment.appendChild(document.createTextNode(text.slice(lastIdx)));
+                    }
+                    node.parentNode.replaceChild(fragment, node);
+                }
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                // 跳过已有的链接和锚点
+                if (node.classList && (node.classList.contains('clause-link') || node.classList.contains('clause-anchor'))) {
+                    return;
+                }
+                // 跳过代码块和 pre
+                if (node.tagName === 'CODE' || node.tagName === 'PRE' || node.tagName === 'A') {
+                    return;
+                }
+                var children = Array.from(node.childNodes);
+                children.forEach(processNode);
+            }
+        }
+
+        processNode(container);
+    }
+
+    /**
+     * 滚动到原始合同中的指定条款
+     * @param {string} numeral - 条款编号（中文数字或阿拉伯数字）
+     */
+    function scrollToClause(numeral) {
+        var originalBody = document.getElementById('contractOriginalText');
+        if (!originalBody) return;
+
+        var target = null;
+
+        // 先尝试通过 clauseMap 查找
+        var anchors = originalBody.querySelectorAll('.clause-anchor');
+        var chineseNums = { '一':'1','二':'2','三':'3','四':'4','五':'5','六':'6','七':'7','八':'8','九':'9','十':'10' };
+
+        // 转换中文数字为阿拉伯数字
+        var searchNum = chineseNums[numeral] || numeral;
+
+        for (var i = 0; i < anchors.length; i++) {
+            var text = anchors[i].textContent.trim();
+            var m = text.match(/第([一二三四五六七八九十百千\d]+)[条章]/);
+            if (m) {
+                var anchorNum = chineseNums[m[1]] || m[1];
+                if (anchorNum === searchNum) {
+                    target = anchors[i];
+                    break;
+                }
+            }
+            // fallback: match by index
+            if (String(i + 1) === searchNum) {
+                target = anchors[i];
+                break;
+            }
+        }
+
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // 高亮效果
+            target.style.transition = 'background 0.3s';
+            target.style.background = '#fef08a';
+            setTimeout(function() {
+                target.style.background = '';
+            }, 2000);
+        }
+    }
+
     // ===== 页面切换 =====
     function switchPage(pageName) {
         state.currentPage = pageName;
@@ -486,8 +645,10 @@ reviewHtmlInDoc +
             els.fileSize.textContent = FileParser.formatFileSize(file.size);
             els.fileInfo.style.display = 'block';
 
-            // 显示原文
-            els.originalBody.innerHTML = `<div class="preview-text">${result.html}</div>`;
+            // 显示原文（带条款锚点）
+            els.originalBody.innerHTML = `<div class="preview-text" id="contractOriginalText">${result.html}</div>`;
+            // 给条款编号添加锚点
+            addClauseAnchors();
             if (els.originalBadge) {
                 els.originalBadge.textContent = '已上传';
                 els.originalBadge.className = 'split-badge badge-original';
@@ -575,6 +736,8 @@ reviewHtmlInDoc +
                 const html = AIReview.markdownToHtml(fullContent);
                 const safeHtml = DOMPurify.sanitize(html);
                 reviewResult.innerHTML = safeHtml;
+                // 给审核意见中的条款引述添加点击跳转
+                linkClauseReferences(reviewResult);
                 els.reviewBody.scrollTop = els.reviewBody.scrollHeight;
             },
             // onComplete
