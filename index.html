@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>合同智能审核助手</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- mammoth.js for docx parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <!-- pdf.js for pdf parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    </script>
+    <!-- marked.js for markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+    <!-- DOMPurify for sanitization -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">⚖️</div>
+            <h1>合同智能审核助手</h1>
+        </div>
+        <div class="header-right">
+            <button class="btn-config" id="btnConfig" title="API 配置">
+                <span>⚙️</span> API 配置
+            </button>
+        </div>
+    </header>
+
+    <!-- API Config Panel -->
+    <div class="config-panel" id="configPanel">
+        <div class="config-content">
+            <h3>🔑 AI API 配置</h3>
+            <div class="form-group">
+                <label>模型提供商</label>
+                <select id="providerSelect">
+                    <option value="openai">OpenAI (GPT-4)</option>
+                    <option value="claude">Claude (Anthropic)</option>
+                    <option value="custom">自定义 OpenAI 兼容接口</option>
+                </select>
+            </div>
+            <div class="form-group" id="customEndpointGroup" style="display:none;">
+                <label>自定义接口地址</label>
+                <input type="text" id="customEndpoint" placeholder="https://api.example.com/v1/chat/completions">
+            </div>
+            <div class="form-group">
+                <label>API Key</label>
+                <input type="password" id="apiKeyInput" placeholder="sk-... 或 你的 API Key">
+                <small>Key 仅保存在浏览器本地，不会上传到任何服务器</small>
+            </div>
+            <div class="form-group">
+                <label>模型名称</label>
+                <input type="text" id="modelInput" placeholder="默认: gpt-4 / claude-3-sonnet">
+            </div>
+            <div class="config-actions">
+                <button class="btn-primary" id="btnSaveConfig">保存配置</button>
+                <button class="btn-secondary" id="btnCloseConfig">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Section -->
+    <section class="upload-section" id="uploadSection">
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📄</div>
+            <h2>上传合同文件</h2>
+            <p>支持 .docx、.pdf 格式，拖拽文件到此处或点击上传</p>
+            <input type="file" id="fileInput" accept=".docx,.pdf" hidden>
+            <button class="btn-primary btn-upload" id="btnUpload">选择文件</button>
+            <div class="upload-formats">
+                <span class="format-tag">.docx</span>
+                <span class="format-tag">.pdf</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Preview Section -->
+    <section class="preview-section" id="previewSection" style="display:none;">
+        <!-- Toolbar -->
+        <div class="preview-toolbar">
+            <div class="toolbar-left">
+                <button class="btn-tool" id="btnBack">← 返回上传</button>
+                <span class="filename" id="filenameDisplay"></span>
+            </div>
+            <div class="toolbar-right">
+                <button class="btn-tool btn-review" id="btnStartReview" title="开始 AI 审核">
+                    🤖 开始审核
+                </button>
+                <button class="btn-tool btn-stop" id="btnStopReview" style="display:none;" title="停止审核">
+                    ⏹ 停止
+                </button>
+            </div>
+        </div>
+
+        <!-- Split View -->
+        <div class="split-view">
+            <!-- Left: Original -->
+            <div class="panel panel-left">
+                <div class="panel-header">
+                    <span class="panel-title">📄 原始合同</span>
+                    <span class="panel-badge" id="originalBadge"></span>
+                </div>
+                <div class="panel-content" id="originalContent">
+                    <div class="placeholder-text">合同内容将显示在这里</div>
+                </div>
+            </div>
+
+            <!-- Resize Handle -->
+            <div class="resize-handle" id="resizeHandle"></div>
+
+            <!-- Right: AI Review -->
+            <div class="panel panel-right">
+                <div class="panel-header">
+                    <span class="panel-title">🤖 AI 审核意见</span>
+                    <span class="panel-badge" id="reviewBadge">等待审核</span>
+                </div>
+                <div class="panel-content" id="reviewContent">
+                    <div class="placeholder-text">
+                        <div>点击「开始审核」按钮，AI 将分析合同并给出修改建议</div>
+                        <div class="review-tips">
+                            <strong>审核要点：</strong>
+                            <ul>
+                                <li>合同主体信息完整性</li>
+                                <li>权利义务条款对等性</li>
+                                <li>违约责任明确性</li>
+                                <li>争议解决条款合理性</li>
+                                <li>隐藏风险条款识别</li>
+                                <li>付款/交付条款清晰度</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Floating Chat Assistant -->
+    <div class="chat-widget" id="chatWidget">
+        <div class="chat-header" id="chatHeader">
+            <span>💬 AI 助手</span>
+            <div class="chat-controls">
+                <button class="chat-btn" id="chatMinimize">−</button>
+                <button class="chat-btn" id="chatClose">×</button>
+            </div>
+        </div>
+        <div class="chat-body" id="chatBody">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-area">
+                <textarea id="chatInput" placeholder="针对合同内容提问..." rows="2"></textarea>
+                <button class="btn-send" id="btnSend">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Toggle Button (shown when chat minimized) -->
+    <button class="chat-toggle" id="chatToggle" style="display:none;">
+        💬 AI 助手
+    </button>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display:none;">
+        <div class="loading-spinner"></div>
+        <p id="loadingText">正在解析文件...</p>
+    </div>
+
+    <script src="js/fileParser.js"></script>
+    <script src="js/aiReview.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
