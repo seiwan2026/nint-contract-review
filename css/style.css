@@ -575,8 +575,107 @@ body {
 .split-column-body {
     flex: 1;
     overflow-y: auto;
-    padding: 20px;
+    padding: 32px 36px;
     min-height: 0;
+    font-size: 15px;
+    line-height: 1.9;
+    color: var(--text-primary);
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Serif SC", "SimSun", serif;
+}
+
+/* 合同原文/审核意见中的段落 */
+.split-column-body p {
+    margin: 0 0 12px 0;
+    text-indent: 0;
+}
+
+.split-column-body h1,
+.split-column-body h2,
+.split-column-body h3,
+.split-column-body h4 {
+    margin: 24px 0 12px 0;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.split-column-body h1 { font-size: 20px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+.split-column-body h2 { font-size: 17px; }
+.split-column-body h3 { font-size: 15px; }
+
+.split-column-body ul,
+.split-column-body ol {
+    margin: 8px 0 16px 0;
+    padding-left: 24px;
+}
+
+.split-column-body li {
+    margin: 6px 0;
+}
+
+.split-column-body strong {
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.split-column-body blockquote {
+    margin: 12px 0;
+    padding: 10px 16px;
+    border-left: 3px solid var(--primary);
+    background: var(--primary-subtle);
+    border-radius: 0 6px 6px 0;
+}
+
+.split-column-body code {
+    font-size: 13px;
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
+}
+
+.split-column-body pre {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    overflow-x: auto;
+    margin: 12px 0;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.split-column-body hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+}
+
+.split-column-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+}
+
+.split-column-body th,
+.split-column-body td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 14px;
+}
+
+.split-column-body th {
+    background: var(--bg);
+    font-weight: 600;
+}
+
+/* 合同原文的 pre-wrap 保留换行 */
+.split-column-body .contract-raw {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 15px;
+    line-height: 2;
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Serif SC", "SimSun", serif;
 }
 
 /* ===== Control Buttons ===== */
@@ -1007,10 +1106,9 @@ body {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 0;
 }
 
-/* 桌宠图标（始终可见） */
+/* 桌宠图标（始终可见，放在面板下方） */
 .chat-mascot {
     width: 56px;
     height: 56px;
@@ -1020,6 +1118,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    order: 2;
+    flex-shrink: 0;
 }
 
 .mascot-body {
@@ -1069,33 +1169,29 @@ body {
     transform: scale(1.08);
 }
 
-/* 对话框面板（默认隐藏，hover 展开） */
+/* 对话框面板 — 正常流布局，在桌宠上方展开 */
 .chat-panel {
-    position: absolute;
-    bottom: 68px;
-    right: 0;
+    order: 1;
     width: 340px;
-    height: 420px;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    margin-bottom: 6px;
     background: var(--bg-elevated);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    opacity: 0;
-    transform: translateY(8px) scale(0.95);
-    pointer-events: none;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    transform-origin: bottom right;
+    transition: max-height 0.3s ease, opacity 0.2s ease;
 }
 
+/* Wrapper hover / dragging / open → 面板展开 */
 .chat-mascot-wrapper:hover .chat-panel,
 .chat-mascot-wrapper.dragging .chat-panel,
 .chat-mascot-wrapper.open .chat-panel {
+    max-height: 420px;
     opacity: 1;
-    transform: translateY(0) scale(1);
-    pointer-events: auto;
 }
 
 .chat-mascot-wrapper:hover .chat-panel {
