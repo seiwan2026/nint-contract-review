@@ -259,45 +259,82 @@
             return;
         }
 
-        const reviewHtml = `<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>合同审核结果</title>
-<style>
-body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; line-height:1.8; max-width:900px; margin:40px auto; padding:20px; color:#1e293b; }
-h1 { font-size:22px; border-bottom:2px solid #6366f1; padding-bottom:12px; margin-bottom:24px; }
-h2 { font-size:18px; margin:24px 0 12px; color:#4f46e5; }
-h3 { font-size:15px; margin:16px 0 8px; }
-strong { color:#1e293b; }
-p { margin:8px 0; }
-ul, ol { margin:8px 0; padding-left:24px; }
-li { margin:4px 0; }
-hr { border:none; border-top:1px solid #e2e8f0; margin:20px 0; }
-.contract-text { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin-bottom:24px; white-space:pre-wrap; }
-.footer { margin-top:32px; padding-top:16px; border-top:1px solid #e2e8f0; font-size:12px; color:#94a3b8; text-align:center; }
-</style>
-</head>
-<body>
-<h1>合同智能审核报告</h1>
-<h2>原始合同内容</h2>
-<div class="contract-text">${(state.contractText || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-<h2>AI 审核意见</h2>
-${state.reviewContent}
-<div class="footer">生成时间：${new Date().toLocaleString('zh-CN')} | 由合同智能审核助手生成</div>
-</body>
-</html>`;
+        // 生成 Word 兼容格式报告
+        var title = '合同智能审核报告';
+        var dateStr = new Date().toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+        var contractTextEscaped = (state.contractText || '')
+            .replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/\n/g, '</p><p class=clause>');
+        var reviewHtmlInDoc = state.reviewContent;
 
-        const blob = new Blob([reviewHtml], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        var docHtml = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
+'<head>' +
+'<meta charset="UTF-8">' +
+'<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">' +
+'<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->' +
+'<title>' + title + '</title>' +
+'<style>' +
+' @page { size: A4; margin: 2.54cm 3.18cm 2.54cm 3.18cm; mso-header-margin: 1.5cm; mso-footer-margin: 1.25cm; }' +
+' body { font-family: "PingFang SC","Microsoft YaHei","SimSun",serif; font-size: 14pt; line-height: 2; color: #1e293b; }' +
+' .report-title { text-align: center; font-size: 22pt; font-weight: bold; margin: 80pt 0 40pt 0; padding-bottom: 20pt; border-bottom: 2pt solid #6366f1; color: #1e293b; }' +
+' .report-meta { text-align: center; font-size: 11pt; color: #64748b; margin: 20pt 0 50pt 0; }' +
+' .report-meta p { margin: 6pt 0; }' +
+' h1 { font-size: 18pt; font-weight: bold; margin: 28pt 0 16pt 0; padding-bottom: 8pt; border-bottom: 1.5pt solid #6366f1; color: #4f46e5; }' +
+' h2 { font-size: 15pt; font-weight: bold; margin: 22pt 0 10pt 0; color: #3730a3; }' +
+' h3 { font-size: 13pt; font-weight: bold; margin: 16pt 0 8pt 0; color: #1e293b; }' +
+' h4 { font-size: 12pt; font-weight: bold; margin: 12pt 0 6pt 0; color: #334155; }' +
+' p { margin: 6pt 0; text-align: justify; text-justify: inter-ideograph; }' +
+' p.clause { margin: 3pt 0; text-indent: 0; }' +
+' strong, b { color: #1e293b; }' +
+' ul, ol { margin: 8pt 0 8pt 24pt; }' +
+' li { margin: 4pt 0; }' +
+' blockquote { margin: 14pt 0; padding: 10pt 16pt; border-left: 3pt solid #ef4444; background: #fef2f2; font-size: 13pt; }' +
+' code { font-size: 11pt; background: #f8fafc; padding: 2pt 6pt; border: 1pt solid #e2e8f0; border-radius: 3pt; }' +
+' pre { background: #f8fafc; border: 1pt solid #e2e8f0; padding: 12pt; font-size: 11pt; line-height: 1.8; white-space: pre-wrap; word-wrap: break-word; }' +
+' .contract-section { background: #f8fafc; border: 1pt solid #e2e8f0; padding: 16pt 20pt; margin: 16pt 0; }' +
+' .contract-section h2 { margin-top: 0; }' +
+' table { width: 100%; border-collapse: collapse; margin: 14pt 0; }' +
+' th, td { border: 1pt solid #cbd5e1; padding: 8pt 12pt; text-align: left; font-size: 12pt; vertical-align: top; }' +
+' th { background: #f1f5f9; font-weight: bold; }' +
+' hr { border: none; border-top: 1pt solid #e2e8f0; margin: 20pt 0; }' +
+' .report-footer { margin-top: 36pt; padding-top: 14pt; border-top: 1pt solid #e2e8f0; font-size: 10pt; color: #94a3b8; text-align: center; }' +
+' .page-break { page-break-before: always; }' +
+'</style>' +
+'</head>' +
+'<body>' +
+'<div class="report-title">' + title + '</div>' +
+'<div class="report-meta">' +
+'  <p>生成时间：' + dateStr + '</p>' +
+'  <p>审核工具：合同智能审核助手</p>' +
+'  <p>本文档为 AI 自动生成，仅供参考，不构成法律意见</p>' +
+'</div>' +
+'<hr>' +
+'<h1>一、原始合同内容</h1>' +
+'<div class="contract-section">' +
+'  <p class=clause>' + contractTextEscaped + '</p>' +
+'</div>' +
+'<div class="page-break"></div>' +
+'<h1>二、AI 审核意见</h1>' +
+reviewHtmlInDoc +
+'<hr>' +
+'<div class="report-footer">' +
+'  <p>生成时间：' + dateStr + '</p>' +
+'  <p>本报告由合同智能审核助手自动生成，审核结果仅供内部参考，不构成正式法律意见。</p>' +
+'  <p>如需出具正式法律意见书，请咨询专业律师。</p>' +
+'</div>' +
+'</body>' +
+'</html>';
+
+        var bom = '﻿';
+        var blob = new Blob([bom + docHtml], { type: 'application/msword;charset=UTF-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
         a.href = url;
-        a.download = `合同审核结果_${new Date().toISOString().slice(0,10)}.html`;
+        a.download = '合同审核结果_' + new Date().toISOString().slice(0,10) + '.doc';
         a.click();
         URL.revokeObjectURL(url);
-        showToast('审核结果已下载', 'success');
+        showToast('审核结果已下载（Word 格式）', 'success');
     }
-
     // ===== 事件绑定 =====
     function bindEvents() {
         // 侧边栏导航
