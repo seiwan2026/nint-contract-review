@@ -1,77 +1,150 @@
 /**
  * 主应用逻辑
+ * 适配新版 SaaS 风格布局
  */
 
 (function() {
     // ===== DOM 元素 =====
     const els = {
-        btnConfig: document.getElementById('btnConfig'),
-        configPanel: document.getElementById('configPanel'),
-        providerSelect: document.getElementById('providerSelect'),
-        customEndpointGroup: document.getElementById('customEndpointGroup'),
-        customEndpoint: document.getElementById('customEndpoint'),
-        apiKeyInput: document.getElementById('apiKeyInput'),
-        modelInput: document.getElementById('modelInput'),
-        btnSaveConfig: document.getElementById('btnSaveConfig'),
-        btnCloseConfig: document.getElementById('btnCloseConfig'),
-        uploadSection: document.getElementById('uploadSection'),
-        uploadArea: document.getElementById('uploadArea'),
+        // Sidebar
+        sidebar: document.getElementById('sidebar'),
+        navItems: document.querySelectorAll('.nav-item[data-page]'),
+        pageTitle: document.getElementById('pageTitle'),
+
+        // Pages
+        pages: {
+            workbench: document.getElementById('pageWorkbench'),
+            config: document.getElementById('pageConfig'),
+            settings: document.getElementById('pageSettings'),
+        },
+
+        // API Status
+        apiStatus: document.getElementById('apiStatus'),
+        statusDot: document.getElementById('statusDot'),
+        statusText: document.getElementById('statusText'),
+
+        // Workbench - Upload
+        uploadZone: document.getElementById('uploadZone'),
         fileInput: document.getElementById('fileInput'),
-        btnUpload: document.getElementById('btnUpload'),
-        previewSection: document.getElementById('previewSection'),
-        btnBack: document.getElementById('btnBack'),
-        filenameDisplay: document.getElementById('filenameDisplay'),
+        fileInfo: document.getElementById('fileInfo'),
+        fileName: document.getElementById('fileName'),
+        fileSize: document.getElementById('fileSize'),
+        btnChangeFile: document.getElementById('btnChangeFile'),
+
+        // Workbench - Control
         btnStartReview: document.getElementById('btnStartReview'),
         btnStopReview: document.getElementById('btnStopReview'),
-        originalContent: document.getElementById('originalContent'),
-        reviewContent: document.getElementById('reviewContent'),
+        btnDownloadReview: document.getElementById('btnDownloadReview'),
+        btnClearPreview: document.getElementById('btnClearPreview'),
+        reviewProgress: document.getElementById('reviewProgress'),
+        progressFill: document.getElementById('progressFill'),
+
+        // Workbench - Preview (split columns)
+        originalBody: document.getElementById('originalBody'),
+        reviewBody: document.getElementById('reviewBody'),
         originalBadge: document.getElementById('originalBadge'),
         reviewBadge: document.getElementById('reviewBadge'),
-        chatWidget: document.getElementById('chatWidget'),
+
+        // Config Page
+        providerSelect: document.getElementById('providerSelect'),
+        customEndpointRow: document.getElementById('customEndpointRow'),
+        customEndpoint: document.getElementById('customEndpoint'),
+        apiKeyInput: document.getElementById('apiKeyInput'),
+        btnToggleKey: document.getElementById('btnToggleKey'),
+        modelInput: document.getElementById('modelInput'),
+        btnSaveConfig: document.getElementById('btnSaveConfig'),
+
+        // Review Points
+        workbenchPoints: document.getElementById('workbenchPoints'),
+        btnResetPoints: document.getElementById('btnResetPoints'),
+        btnSavePoints: document.getElementById('btnSavePoints'),
+        contractTypeSelect: document.getElementById('contractTypeSelect'),
+        reviewStanceSelect: document.getElementById('reviewStanceSelect'),
+
+        // Settings Page
+        btnClearData: document.getElementById('btnClearData'),
+
+        // Chat
+        chatMascotWrapper: document.getElementById('chatMascotWrapper'),
+        chatMascot: document.getElementById('chatMascot'),
         chatHeader: document.getElementById('chatHeader'),
-        chatMinimize: document.getElementById('chatMinimize'),
-        chatClose: document.getElementById('chatClose'),
-        chatToggle: document.getElementById('chatToggle'),
+        chatPanel: document.getElementById('chatPanel'),
+        chatStatus: document.getElementById('chatStatus'),
         chatMessages: document.getElementById('chatMessages'),
         chatInput: document.getElementById('chatInput'),
         btnSend: document.getElementById('btnSend'),
+
+        // Toast & Loading
         toast: document.getElementById('toast'),
         loadingOverlay: document.getElementById('loadingOverlay'),
         loadingText: document.getElementById('loadingText'),
-        resizeHandle: document.getElementById('resizeHandle'),
     };
 
     // ===== 状态 =====
     let state = {
+        currentPage: 'workbench',
         currentFile: null,
         contractText: '',
         isReviewing: false,
         chatHistory: [],
         configLoaded: false,
+        reviewContent: null,
     };
 
     // ===== 初始化 =====
     function init() {
         loadConfig();
+        loadReviewPoints();
         bindEvents();
-        initResize();
         initChatDrag();
-        addWelcomeMessage();
+        updateApiStatus();
+
+        // 初始化聊天（通用模式，无需上传合同即可使用）
+        state.chatHistory = [
+            { role: 'system', content: getGeneralSystemPrompt() }
+        ];
+        updateChatStatus('general');
+    }
+
+    // ===== 页面切换 =====
+    function switchPage(pageName) {
+        state.currentPage = pageName;
+
+        // 更新导航
+        els.navItems.forEach(item => {
+            item.classList.toggle('active', item.dataset.page === pageName);
+        });
+
+        // 更新页面
+        Object.keys(els.pages).forEach(key => {
+            const page = els.pages[key];
+            if (page) {
+                page.classList.toggle('active', key === pageName);
+            }
+        });
+
+        // 更新标题
+        const titles = {
+            workbench: '工作台',
+            config: '审核配置',
+            settings: '设置',
+        };
+        els.pageTitle.textContent = titles[pageName] || '';
     }
 
     // ===== 配置管理 =====
     function loadConfig() {
         const config = AIReview.loadConfig();
         if (config) {
-            els.providerSelect.value = config.provider || 'openai';
+            els.providerSelect.value = config.provider || 'deepseek';
             els.apiKeyInput.value = config.apiKey || '';
             els.modelInput.value = config.model || '';
             if (config.provider === 'custom') {
-                els.customEndpointGroup.style.display = 'block';
+                els.customEndpointRow.style.display = 'block';
                 els.customEndpoint.value = config.customEndpoint || '';
             }
             state.configLoaded = true;
-            els.btnConfig.classList.add('active');
+            updateApiStatus();
         }
     }
 
@@ -91,90 +164,229 @@
             return;
         }
 
-        AIReview.saveConfig({ provider, apiKey, model, customEndpoint });
+        // 保留已有的 reviewPoints
+        const existingConfig = AIReview.loadConfig() || {};
+        AIReview.saveConfig({
+            provider, apiKey, model, customEndpoint,
+            reviewPoints: existingConfig.reviewPoints
+        });
         state.configLoaded = true;
-        els.btnConfig.classList.add('active');
+        updateApiStatus();
         showToast('配置已保存', 'success');
-        els.configPanel.classList.remove('show');
+    }
+
+    // ===== 审核要点管理 =====
+    function loadReviewPoints() {
+        const points = AIReview.loadReviewPoints();
+        if (els.workbenchPoints) els.workbenchPoints.value = points;
+    }
+
+    function saveReviewPoints(pointsText) {
+        const config = AIReview.loadConfig() || {};
+        config.reviewPoints = pointsText.trim();
+        localStorage.setItem('contract_review_config', JSON.stringify(config));
+        AIReview.config = config;
+        if (els.workbenchPoints) els.workbenchPoints.value = pointsText;
+        showToast('审核要点已保存', 'success');
+    }
+
+    function resetReviewPoints() {
+        const defaultPoints = AIReview.getDefaultReviewPoints();
+        if (els.workbenchPoints) els.workbenchPoints.value = defaultPoints;
+        const config = AIReview.loadConfig() || {};
+        delete config.reviewPoints;
+        localStorage.setItem('contract_review_config', JSON.stringify(config));
+        AIReview.config = config;
+        showToast('已恢复默认审核要点', 'success');
+    }
+
+    function updateApiStatus() {
+        if (state.configLoaded && AIReview.config && AIReview.config.apiKey) {
+            els.statusDot.classList.add('connected');
+            els.statusText.textContent = 'API 已配置';
+        } else {
+            els.statusDot.classList.remove('connected');
+            els.statusText.textContent = '未配置 API';
+        }
+    }
+
+    // ===== 清空预览 =====
+    function clearPreview() {
+        // 清空原始合同
+        els.originalBody.innerHTML = `<div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <p>请先上传合同文件</p>
+            <span class="empty-hint">支持 .docx、.pdf 格式</span>
+        </div>`;
+        if (els.originalBadge) {
+            els.originalBadge.textContent = '未上传';
+            els.originalBadge.className = 'split-badge badge-original';
+        }
+
+        // 清空审核意见
+        els.reviewBody.innerHTML = `<div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="m9 12 2 2 4-4"/>
+            </svg>
+            <p>AI 审核结果将显示在这里</p>
+            <span class="empty-hint">上传文件后点击「开始审核」</span>
+        </div>`;
+        els.reviewBadge.textContent = '等待审核';
+        els.reviewBadge.className = 'split-badge';
+
+        // 重置状态
+        state.contractText = '';
+        state.chatHistory = [
+            { role: 'system', content: getGeneralSystemPrompt() }
+        ];
+        updateChatStatus('general');
+        if (els.fileInfo) els.fileInfo.style.display = 'none';
+        els.btnStartReview.disabled = true;
+        els.btnDownloadReview.disabled = true;
+        state.reviewContent = null;
+
+        showToast('预览已清空', 'success');
+    }
+
+    // ===== 下载审核结果 =====
+    function downloadReview() {
+        if (!state.reviewContent) {
+            showToast('请先完成审核', 'warning');
+            return;
+        }
+
+        const reviewHtml = `<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>合同审核结果</title>
+<style>
+body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; line-height:1.8; max-width:900px; margin:40px auto; padding:20px; color:#1e293b; }
+h1 { font-size:22px; border-bottom:2px solid #6366f1; padding-bottom:12px; margin-bottom:24px; }
+h2 { font-size:18px; margin:24px 0 12px; color:#4f46e5; }
+h3 { font-size:15px; margin:16px 0 8px; }
+strong { color:#1e293b; }
+p { margin:8px 0; }
+ul, ol { margin:8px 0; padding-left:24px; }
+li { margin:4px 0; }
+hr { border:none; border-top:1px solid #e2e8f0; margin:20px 0; }
+.contract-text { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin-bottom:24px; white-space:pre-wrap; }
+.footer { margin-top:32px; padding-top:16px; border-top:1px solid #e2e8f0; font-size:12px; color:#94a3b8; text-align:center; }
+</style>
+</head>
+<body>
+<h1>合同智能审核报告</h1>
+<h2>原始合同内容</h2>
+<div class="contract-text">${(state.contractText || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+<h2>AI 审核意见</h2>
+${state.reviewContent}
+<div class="footer">生成时间：${new Date().toLocaleString('zh-CN')} | 由合同智能审核助手生成</div>
+</body>
+</html>`;
+
+        const blob = new Blob([reviewHtml], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `合同审核结果_${new Date().toISOString().slice(0,10)}.html`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('审核结果已下载', 'success');
     }
 
     // ===== 事件绑定 =====
     function bindEvents() {
-        // 配置面板
-        els.btnConfig.addEventListener('click', () => {
-            els.configPanel.classList.toggle('show');
+        // 侧边栏导航
+        els.navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                switchPage(item.dataset.page);
+            });
         });
 
-        els.btnSaveConfig.addEventListener('click', saveConfig);
-        els.btnCloseConfig.addEventListener('click', () => {
-            els.configPanel.classList.remove('show');
-        });
-
-        els.providerSelect.addEventListener('change', () => {
-            els.customEndpointGroup.style.display =
-                els.providerSelect.value === 'custom' ? 'block' : 'none';
-        });
-
-        // 点击面板外部关闭
-        document.addEventListener('click', (e) => {
-            if (!els.configPanel.contains(e.target) && !els.btnConfig.contains(e.target)) {
-                els.configPanel.classList.remove('show');
-            }
-        });
+        // 审核控制按钮
+        els.btnStartReview.addEventListener('click', startReview);
+        els.btnStopReview.addEventListener('click', stopReview);
+        if (els.btnDownloadReview) {
+            els.btnDownloadReview.addEventListener('click', downloadReview);
+        }
+        if (els.btnClearPreview) {
+            els.btnClearPreview.addEventListener('click', () => {
+                if (confirm('确定要清空预览吗？这将清除上传的合同和审核结果。')) {
+                    clearPreview();
+                }
+            });
+        }
 
         // 文件上传
-        els.btnUpload.addEventListener('click', () => els.fileInput.click());
+        els.uploadZone.addEventListener('click', () => els.fileInput.click());
         els.fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
 
-        // 拖拽上传
-        els.uploadArea.addEventListener('dragover', (e) => {
+        els.uploadZone.addEventListener('dragover', (e) => {
             e.preventDefault();
-            els.uploadArea.classList.add('dragover');
+            els.uploadZone.classList.add('dragover');
         });
 
-        els.uploadArea.addEventListener('dragleave', () => {
-            els.uploadArea.classList.remove('dragover');
+        els.uploadZone.addEventListener('dragleave', () => {
+            els.uploadZone.classList.remove('dragover');
         });
 
-        els.uploadArea.addEventListener('drop', (e) => {
+        els.uploadZone.addEventListener('drop', (e) => {
             e.preventDefault();
-            els.uploadArea.classList.remove('dragover');
+            els.uploadZone.classList.remove('dragover');
             const file = e.dataTransfer.files[0];
             if (file) handleFile(file);
         });
 
-        // 返回上传
-        els.btnBack.addEventListener('click', () => {
-            els.previewSection.style.display = 'none';
-            els.uploadSection.style.display = 'flex';
-            els.originalContent.innerHTML = '<div class="placeholder-text">合同内容将显示在这里</div>';
-            els.reviewContent.innerHTML = `
-                <div class="placeholder-text">
-                    <div>点击「开始审核」按钮，AI 将分析合同并给出修改建议</div>
-                    <div class="review-tips">
-                        <strong>审核要点：</strong>
-                        <ul>
-                            <li>合同主体信息完整性</li>
-                            <li>权利义务条款对等性</li>
-                            <li>违约责任明确性</li>
-                            <li>争议解决条款合理性</li>
-                            <li>隐藏风险条款识别</li>
-                            <li>付款/交付条款清晰度</li>
-                        </ul>
-                    </div>
-                </div>`;
-            els.reviewBadge.textContent = '等待审核';
-            els.reviewBadge.className = 'panel-badge';
-            state.currentFile = null;
-            state.contractText = '';
-            state.chatHistory = [];
-            els.chatMessages.innerHTML = '';
-            addWelcomeMessage();
-        });
+        els.btnChangeFile.addEventListener('click', () => els.fileInput.click());
 
         // AI 审核
         els.btnStartReview.addEventListener('click', startReview);
         els.btnStopReview.addEventListener('click', stopReview);
+
+        // 配置页面
+        els.providerSelect.addEventListener('change', () => {
+            els.customEndpointRow.style.display =
+                els.providerSelect.value === 'custom' ? 'block' : 'none';
+        });
+
+        els.btnToggleKey.addEventListener('click', () => {
+            const type = els.apiKeyInput.type;
+            els.apiKeyInput.type = type === 'password' ? 'text' : 'password';
+        });
+
+        els.btnSaveConfig.addEventListener('click', saveConfig);
+
+        // 审核要点 - 工作台
+        if (els.btnSavePoints) {
+            els.btnSavePoints.addEventListener('click', () => {
+                saveReviewPoints(els.workbenchPoints.value);
+            });
+        }
+        if (els.btnResetPoints) {
+            els.btnResetPoints.addEventListener('click', resetReviewPoints);
+        }
+
+    // ===== 审核要点管理 =====
+        els.btnClearData.addEventListener('click', () => {
+            if (confirm('确定要清空所有本地数据吗？这将删除 API Key、审核要点和聊天记录。')) {
+                localStorage.removeItem('contract_review_config');
+                state.configLoaded = false;
+                els.apiKeyInput.value = '';
+                els.modelInput.value = '';
+                els.customEndpoint.value = '';
+                els.providerSelect.value = 'deepseek';
+                els.customEndpointRow.style.display = 'none';
+                AIReview.config = null;
+                resetReviewPoints();
+                updateApiStatus();
+                showToast('本地数据已清空', 'success');
+            }
+        });
 
         // 聊天
         els.btnSend.addEventListener('click', sendChatMessage);
@@ -185,19 +397,25 @@
             }
         });
 
-        els.chatMinimize.addEventListener('click', () => {
-            els.chatWidget.classList.add('minimized');
-            els.chatToggle.style.display = 'block';
+        // 聊天窗口拖拽缩放
+        els.chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
         });
 
-        els.chatClose.addEventListener('click', () => {
-            els.chatWidget.classList.add('minimized');
-            els.chatToggle.style.display = 'none';
+        // 触屏设备：点击桌宠切换展开/收起
+        els.chatMascot.addEventListener('click', (e) => {
+            if (window.matchMedia('(hover: none)').matches) {
+                e.stopPropagation();
+                els.chatMascotWrapper.classList.toggle('open');
+            }
         });
 
-        els.chatToggle.addEventListener('click', () => {
-            els.chatWidget.classList.remove('minimized');
-            els.chatToggle.style.display = 'none';
+        // 点击面板外部关闭（触屏设备）
+        document.addEventListener('click', (e) => {
+            if (!els.chatMascotWrapper.contains(e.target) && window.matchMedia('(hover: none)').matches) {
+                els.chatMascotWrapper.classList.remove('open');
+            }
         });
     }
 
@@ -209,7 +427,7 @@
         const ext = '.' + file.name.split('.').pop().toLowerCase();
 
         if (!validExts.includes(ext)) {
-            showToast(`不支持的文件格式: ${ext}，请上传 .docx 或 .pdf 文件`, 'error');
+            showToast(`不支持的文件格式: ${ext}，请上传 .docx 或 .pdf`, 'error');
             return;
         }
 
@@ -226,16 +444,20 @@
             const result = await FileParser.parse(file);
             state.contractText = result.text;
 
+            // 显示文件信息
+            els.fileName.textContent = file.name;
+            els.fileSize.textContent = FileParser.formatFileSize(file.size);
+            els.fileInfo.style.display = 'block';
+
             // 显示原文
-            els.originalContent.innerHTML = result.html;
-            els.originalBadge.textContent = `${FileParser.formatFileSize(file.size)} · ${result.text.length} 字`;
+            els.originalBody.innerHTML = `<div class="preview-text">${result.html}</div>`;
+            if (els.originalBadge) {
+                els.originalBadge.textContent = '已上传';
+                els.originalBadge.className = 'split-badge badge-original';
+            }
 
-            // 显示文件名
-            els.filenameDisplay.textContent = file.name;
-
-            // 切换视图
-            els.uploadSection.style.display = 'none';
-            els.previewSection.style.display = 'flex';
+            // 启用审核按钮
+            els.btnStartReview.disabled = false;
 
             showToast('文件解析成功', 'success');
 
@@ -262,7 +484,7 @@
 
         if (!state.configLoaded || !AIReview.config || !AIReview.config.apiKey) {
             showToast('请先配置 API Key', 'warning');
-            els.configPanel.classList.add('show');
+            switchPage('config');
             return;
         }
 
@@ -273,16 +495,37 @@
 
         state.isReviewing = true;
         els.btnStartReview.style.display = 'none';
-        els.btnStopReview.style.display = 'inline-block';
+        els.btnStopReview.style.display = 'flex';
+        els.reviewProgress.style.display = 'block';
+        els.progressFill.style.width = '30%';
         els.reviewBadge.textContent = '审核中...';
-        els.reviewBadge.className = 'panel-badge reviewing';
+        els.reviewBadge.className = 'preview-badge reviewing';
 
         // 初始化审核内容区域
-        els.reviewContent.innerHTML = '<div class="review-result" id="reviewResult"></div>';
+        els.reviewBody.innerHTML = '<div class="review-result" id="reviewResult"><p style="color:var(--text-muted)">AI 正在分析合同内容...</p></div>';
         const reviewResult = document.getElementById('reviewResult');
-        reviewResult.innerHTML = '<p style="color:var(--gray-400)">AI 正在分析合同内容...</p>';
+
+        // 获取当前审核要点和审核立场
+        const currentPoints = els.workbenchPoints ? els.workbenchPoints.value.trim() : '';
+        const currentStance = els.reviewStanceSelect ? els.reviewStanceSelect.value : 'neutral';
+        if (currentPoints && AIReview.config) {
+            AIReview.config.reviewPoints = currentPoints;
+            const saved = JSON.parse(localStorage.getItem('contract_review_config') || '{}');
+            saved.reviewPoints = currentPoints;
+            localStorage.setItem('contract_review_config', JSON.stringify(saved));
+        }
 
         let hasContent = false;
+        let progressTimer = null;
+
+        // 模拟进度动画
+        let progress = 30;
+        progressTimer = setInterval(() => {
+            if (progress < 90) {
+                progress += Math.random() * 8;
+                els.progressFill.style.width = Math.min(progress, 90) + '%';
+            }
+        }, 800);
 
         await AIReview.review(
             state.contractText,
@@ -292,39 +535,54 @@
                     reviewResult.innerHTML = '';
                     hasContent = true;
                 }
-                // 实时渲染 Markdown
                 const html = AIReview.markdownToHtml(fullContent);
                 const safeHtml = DOMPurify.sanitize(html);
                 reviewResult.innerHTML = safeHtml;
-                // 自动滚动到底部
-                els.reviewContent.scrollTop = els.reviewContent.scrollHeight;
+                els.reviewBody.scrollTop = els.reviewBody.scrollHeight;
             },
             // onComplete
             (fullContent) => {
-                state.isReviewing = false;
-                els.btnStartReview.style.display = 'inline-block';
-                els.btnStopReview.style.display = 'none';
-                els.reviewBadge.textContent = '审核完成';
-                els.reviewBadge.className = 'panel-badge completed';
-                showToast('AI 审核完成', 'success');
+                clearInterval(progressTimer);
+                els.progressFill.style.width = '100%';
 
-                // 添加系统消息到聊天历史
-                state.chatHistory.push({
-                    role: 'system',
-                    content: AIReview.getChatSystemPrompt(state.contractText)
-                });
+                setTimeout(() => {
+                    state.isReviewing = false;
+                    els.btnStartReview.style.display = 'flex';
+                    els.btnStopReview.style.display = 'none';
+                    els.reviewProgress.style.display = 'none';
+                    els.reviewBadge.textContent = '审核完成';
+                    els.reviewBadge.className = 'preview-badge completed';
+                    els.btnDownloadReview.disabled = false;
+                    showToast('AI 审核完成', 'success');
+
+                    // 保存审核原始内容（用于下载）
+                    state.reviewContent = fullContent;
+
+                    // 切换到合同对话模式
+                    state.chatHistory = [
+                        { role: 'system', content: AIReview.getChatSystemPrompt(state.contractText) }
+                    ];
+                    updateChatStatus('contract');
+                }, 500);
             },
             // onError
             (err) => {
+                clearInterval(progressTimer);
                 state.isReviewing = false;
-                els.btnStartReview.style.display = 'inline-block';
+                els.btnStartReview.style.display = 'flex';
                 els.btnStopReview.style.display = 'none';
+                els.reviewProgress.style.display = 'none';
                 els.reviewBadge.textContent = '审核失败';
-                els.reviewBadge.className = 'panel-badge';
+                els.reviewBadge.className = 'preview-badge';
                 showToast(err.message, 'error');
                 if (!hasContent) {
                     reviewResult.innerHTML = `<p style="color:var(--danger)">审核失败: ${err.message}</p>`;
                 }
+            },
+            // options: 立场和自定义要点
+            {
+                stance: currentStance,
+                customPoints: currentPoints || undefined
             }
         );
     }
@@ -332,15 +590,35 @@
     function stopReview() {
         AIReview.cancel();
         state.isReviewing = false;
-        els.btnStartReview.style.display = 'inline-block';
+        els.btnStartReview.style.display = 'flex';
         els.btnStopReview.style.display = 'none';
+        els.reviewProgress.style.display = 'none';
         els.reviewBadge.textContent = '已取消';
-        els.reviewBadge.className = 'panel-badge';
+        els.reviewBadge.className = 'preview-badge';
     }
 
     // ===== 聊天功能 =====
-    function addWelcomeMessage() {
-        addChatMessage('assistant', '你好！我是你的合同审核 AI 助手。\n\n请先上传合同文件并配置 API Key，我可以帮你：\n- 自动审核合同条款\n- 回答合同相关法律问题\n- 提供修改建议和风险提示');
+
+    /**
+     * 获取通用系统提示词（未上传合同时使用）
+     */
+    function getGeneralSystemPrompt() {
+        return '你是一个有用的 AI 法律助手，基于 DeepSeek 大模型。你可以回答法律问题、提供法律知识解释、协助理解合同条款，也可以回答其他通用问题。请用中文回答，保持专业、准确、简洁。';
+    }
+
+    /**
+     * 更新聊天状态显示
+     * @param {string} mode - 'general' | 'contract'
+     */
+    function updateChatStatus(mode) {
+        if (els.chatStatus) {
+            els.chatStatus.textContent = mode === 'contract' ? '合同对话' : '通用对话';
+        }
+        if (els.chatInput) {
+            els.chatInput.placeholder = mode === 'contract'
+                ? '针对合同内容提问...'
+                : '问我任何问题...';
+        }
     }
 
     function addChatMessage(role, content) {
@@ -349,7 +627,6 @@
 
         const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
-        // 将 Markdown 转为 HTML
         let htmlContent = '';
         if (typeof marked !== 'undefined') {
             htmlContent = marked.parse(content);
@@ -372,7 +649,7 @@
 
         if (!state.configLoaded || !AIReview.config || !AIReview.config.apiKey) {
             showToast('请先配置 API Key', 'warning');
-            els.configPanel.classList.add('show');
+            switchPage('config');
             return;
         }
 
@@ -380,12 +657,13 @@
         addChatMessage('user', text);
         state.chatHistory.push({ role: 'user', content: text });
         els.chatInput.value = '';
+        els.chatInput.style.height = 'auto';
         els.btnSend.disabled = true;
 
         // 创建助手消息占位
         const assistantMsg = document.createElement('div');
         assistantMsg.className = 'chat-message assistant';
-        assistantMsg.innerHTML = '<div style="color:var(--gray-400)">思考中...</div>';
+        assistantMsg.innerHTML = '<div style="color:var(--text-muted)">思考中...</div>';
         els.chatMessages.appendChild(assistantMsg);
         els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
 
@@ -421,33 +699,6 @@
         );
     }
 
-    // ===== 分栏拖拽调整大小 =====
-    function initResize() {
-        let isResizing = false;
-
-        els.resizeHandle.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            document.body.style.cursor = 'col-resize';
-            document.body.style.userSelect = 'none';
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            const container = document.querySelector('.split-view');
-            const rect = container.getBoundingClientRect();
-            const leftWidth = ((e.clientX - rect.left) / rect.width) * 100;
-            if (leftWidth > 20 && leftWidth < 80) {
-                document.querySelector('.panel-left').style.width = leftWidth + '%';
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            isResizing = false;
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-        });
-    }
-
     // ===== 聊天窗口拖拽 =====
     function initChatDrag() {
         let isDragging = false;
@@ -457,26 +708,29 @@
             isDragging = true;
             startX = e.clientX;
             startY = e.clientY;
-            const rect = els.chatWidget.getBoundingClientRect();
+            const rect = els.chatMascotWrapper.getBoundingClientRect();
             startLeft = rect.left;
             startTop = rect.top;
-            els.chatWidget.style.transition = 'none';
+            els.chatMascotWrapper.style.transition = 'none';
+            // 拖拽时强制面板保持打开
+            els.chatMascotWrapper.classList.add('dragging');
         });
 
         document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
-            els.chatWidget.style.left = (startLeft + dx) + 'px';
-            els.chatWidget.style.top = (startTop + dy) + 'px';
-            els.chatWidget.style.right = 'auto';
-            els.chatWidget.style.bottom = 'auto';
+            els.chatMascotWrapper.style.left = (startLeft + dx) + 'px';
+            els.chatMascotWrapper.style.top = (startTop + dy) + 'px';
+            els.chatMascotWrapper.style.right = 'auto';
+            els.chatMascotWrapper.style.bottom = 'auto';
         });
 
         document.addEventListener('mouseup', () => {
             if (isDragging) {
                 isDragging = false;
-                els.chatWidget.style.transition = '';
+                els.chatMascotWrapper.style.transition = '';
+                els.chatMascotWrapper.classList.remove('dragging');
             }
         });
     }

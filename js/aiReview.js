@@ -1,6 +1,7 @@
 /**
  * AI 审核模块
- * 支持 OpenAI、Claude 和自定义 OpenAI 兼容接口
+ * 支持 DeepSeek、Kimi、火山引擎、硅基流动等国内大模型 API
+ * 以及自定义 OpenAI 兼容接口
  */
 
 const AIReview = {
@@ -29,21 +30,109 @@ const AIReview = {
     },
 
     /**
-     * 获取默认审核提示词
+     * 获取默认审核要点
      * @returns {string}
      */
-    getReviewPrompt() {
-        return `你是一位拥有20年经验的资深法务专家，擅长合同审核与风险识别。请对以下合同进行全面审核，重点关注：
-
-## 审核维度
-1. **主体信息完整性**：签约主体名称、地址、联系方式、资质是否完整准确
+    getDefaultReviewPoints() {
+        return `1. **主体信息完整性**：签约主体名称、地址、联系方式、资质是否完整准确
 2. **权利义务对等性**：双方权利义务是否平衡，是否存在显失公平的条款
 3. **违约责任明确性**：违约情形、违约金计算方式、赔偿范围是否清晰
 4. **争议解决条款**：管辖法院/仲裁机构约定是否合理、明确
 5. **隐藏风险条款**：免责条款、单方变更权、自动续约等可能损害一方利益的条款
 6. **付款与交付**：金额、时间、方式、验收标准是否清晰无歧义
 7. **保密与知识产权**：保密范围、期限、知识产权归属约定是否明确
-8. **终止与解除**：合同终止条件、提前解除程序、善后处理是否合理
+8. **终止与解除**：合同终止条件、提前解除程序、善后处理是否合理`;
+    },
+
+    /**
+     * 获取指定合同类型的默认审核要点
+     * @param {string} contractType
+     * @returns {string}
+     */
+    getDefaultPointsByType(contractType) {
+        const templates = {
+            purchase: `1. **供应商资质与授权**：确认供应商主体资格、经营范围、授权链条是否清晰有效
+2. **标的物描述**：审查采购标的名称、规格、型号、数量、质量标准、验收标准是否明确
+3. **价格与付款**：审查计价方式、付款节点、预付款比例、发票要求，是否存在账期风险
+4. **交付与验收**：审查交付时间、地点、运输方式、验收期限、不合格品处理机制
+5. **质保与售后**：审查质保期限、质保范围、维修更换责任、响应时间
+6. **违约责任**：审查延迟交付、质量不合格、单方面解约等情形的违约金或赔偿约定
+7. **知识产权**：审查交付物是否侵犯第三方知识产权、知识产权归属约定
+8. **争议解决**：审查管辖法院/仲裁条款是否有利于我方`,
+
+            service: `1. **服务范围与标准**：审查服务内容、交付物、质量标准、SLA 指标是否明确
+2. **服务期限与里程碑**：审查服务起止时间、关键节点、延期处理机制
+3. **费用与结算**：审查计费方式、付款节点、报销条款、调价机制
+4. **人员安排**：审查服务团队资质、人员更换程序、关键人员锁定条款
+5. **成果验收**：审查验收标准、验收流程、不合格成果的处理方式
+6. **保密与数据安全**：审查保密义务、数据保护、信息安全责任
+7. **知识产权**：审查服务过程中产生成果的知识产权归属
+8. **违约责任**：审查双方违约责任是否对等，赔偿上限是否合理`,
+
+            advertising: `1. **推广内容与素材**：审查投放素材的合规性、版权归属、审核流程，是否存在虚假宣传或违规风险
+2. **投放平台与形式**：审查投放渠道名称、投放位、投放形式（信息流/搜索/视频等）是否明确
+3. **投放时间与预算**：审查投放起止时间、日/月消耗预算上限、总预算是否明确并可控制
+4. **排期与节奏**：审查投放排期表、关键节点、淡旺季调整机制
+5. **KPI 与效果承诺**：审查曝光量、点击率、转化率、ROI 等核心指标约定，效果不达标的补救措施
+6. **结算与对账**：审查结算周期、对账方式、返点/返货条款、发票要求
+7. **数据归属与隐私**：审查投放数据（用户画像、转化数据等）的所有权归属、数据合规与个人信息保护
+8. **违约与终止**：审查提前终止条件、效果不达标的违约金/补偿条款、素材下架机制`,
+
+            lease: `1. **租赁物描述**：审查租赁物位置、面积、用途、权属状况、交付标准是否明确
+2. **租赁期限**：审查起止日期、续租条件、优先承租权、合同到期处理方式
+3. **租金与押金**：审查租金标准、支付方式、支付时间、押金数额及退还条件
+4. **费用承担**：审查水电气、物业、取暖、维修等费用由哪方承担
+5. **维修责任**：审查出租方维修义务、承租方报修程序、紧急维修处理
+6. **装修与改造**：审查装修审批、费用承担、合同终止后装修归属
+7. **转租与分租**：审查是否允许转租、分租，违约责任如何约定
+8. **提前解约与收回**：审查单方解约条件、违约金、装修损失补偿、逾期腾退责任`,
+        };
+        return templates[contractType] || this.getDefaultReviewPoints();
+    },
+
+    /**
+     * 获取审核立场对应的提示词片段
+     * @param {string} stance
+     * @returns {string}
+     */
+    getStanceInstructions(stance) {
+        switch (stance) {
+            case 'party_a':
+                return `\n\n## 审核立场\n你代表**甲方（委托方 / 采购方 / 付款方）**进行审核。请重点关注：\n- 乙方履约能力和资质审查\n- 验收标准和交付物质量要求是否充分保护甲方利益\n- 付款节点是否合理（尽量后置付款条件）\n- 违约责任和赔偿条款是否充分保障甲方权益\n- 是否存在单方有利于乙方的免责条款或限制责任条款`;
+            case 'party_b':
+                return `\n\n## 审核立场\n你代表**乙方（被委托方 / 供应商 / 收款方）**进行审核。请重点关注：\n- 付款条件和时间是否合理（尽量缩短回款周期）\n- 验收标准是否客观可衡量，验收期限是否合理\n- 甲方的协助配合义务是否明确\n- 责任上限条款是否合理（避免无限责任）\n- 知识产权归属和使用范围是否保护乙方核心资产`;
+            case 'neutral':
+                return `\n\n## 审核立场\n你以**中立第三方**视角进行审核，关注合同整体公平性和双方权利义务的平衡。请指出对任一方可能显失公平的条款，并给出兼顾双方利益的修改建议。`;
+            default:
+                return '';
+        }
+    },
+
+    /**
+     * 加载审核要点（自定义或默认）
+     * @returns {string}
+     */
+    loadReviewPoints() {
+        if (this.config && this.config.reviewPoints) {
+            return this.config.reviewPoints;
+        }
+        return this.getDefaultReviewPoints();
+    },
+
+    /**
+     * 获取审核提示词
+     * @param {string} customPoints - 用户自定义审核要点
+     * @returns {string}
+     */
+    getReviewPrompt(customPoints, stance = null) {
+        const points = customPoints || this.loadReviewPoints();
+        const stanceInstructions = stance ? this.getStanceInstructions(stance) : '';
+
+        return `你是一位拥有20年经验的资深法务专家，擅长合同审核与风险识别。请对以下合同进行全面审核，重点关注：
+
+## 审核维度
+${points}
+${stanceInstructions}
 
 ## 输出格式要求
 请按以下结构输出审核意见：
@@ -89,26 +178,13 @@ ${contractText.substring(0, 8000)}
         const { provider, model } = this.config;
         const modelName = model || this.getDefaultModel(provider);
 
-        if (provider === 'claude') {
-            return {
-                model: modelName,
-                max_tokens: 4096,
-                messages: messages.map(m => ({
-                    role: m.role,
-                    content: m.content
-                })),
-                stream: true
-            };
-        } else {
-            // OpenAI 和自定义接口
-            return {
-                model: modelName,
-                messages: messages,
-                temperature: 0.3,
-                max_tokens: 4096,
-                stream: true
-            };
-        }
+        return {
+            model: modelName,
+            messages: messages,
+            temperature: 0.3,
+            max_tokens: 4096,
+            stream: true
+        };
     },
 
     /**
@@ -118,9 +194,11 @@ ${contractText.substring(0, 8000)}
      */
     getDefaultModel(provider) {
         switch (provider) {
-            case 'openai': return 'gpt-4';
-            case 'claude': return 'claude-3-sonnet-20240229';
-            default: return 'gpt-3.5-turbo';
+            case 'deepseek': return 'deepseek-chat';
+            case 'kimi': return 'moonshot-v1-8k';
+            case 'volcano': return 'doubao-pro-32k';
+            case 'siliconflow': return 'deepseek-ai/DeepSeek-V3';
+            default: return 'deepseek-chat';
         }
     },
 
@@ -131,10 +209,14 @@ ${contractText.substring(0, 8000)}
     getEndpoint() {
         const { provider, customEndpoint } = this.config;
         switch (provider) {
-            case 'openai':
-                return 'https://api.openai.com/v1/chat/completions';
-            case 'claude':
-                return 'https://api.anthropic.com/v1/messages';
+            case 'deepseek':
+                return 'https://api.deepseek.com/v1/chat/completions';
+            case 'kimi':
+                return 'https://api.moonshot.cn/v1/chat/completions';
+            case 'volcano':
+                return 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
+            case 'siliconflow':
+                return 'https://api.siliconflow.cn/v1/chat/completions';
             case 'custom':
                 return customEndpoint || '';
             default:
@@ -147,19 +229,11 @@ ${contractText.substring(0, 8000)}
      * @returns {Object}
      */
     getHeaders() {
-        const { provider, apiKey } = this.config;
-        const headers = {
-            'Content-Type': 'application/json'
+        const { apiKey } = this.config;
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
         };
-
-        if (provider === 'claude') {
-            headers['x-api-key'] = apiKey;
-            headers['anthropic-version'] = '2023-06-01';
-        } else {
-            headers['Authorization'] = `Bearer ${apiKey}`;
-        }
-
-        return headers;
     },
 
     /**
@@ -169,7 +243,7 @@ ${contractText.substring(0, 8000)}
      * @param {Function} onComplete - 完成时的回调
      * @param {Function} onError - 错误时的回调
      */
-    async review(contractText, onChunk, onComplete, onError) {
+    async review(contractText, onChunk, onComplete, onError, options = {}) {
         if (!this.config || !this.config.apiKey) {
             onError(new Error('请先配置 API Key'));
             return;
@@ -178,15 +252,9 @@ ${contractText.substring(0, 8000)}
         this.abortController = new AbortController();
 
         const messages = [
-            { role: 'system', content: this.getReviewPrompt() },
+            { role: 'system', content: this.getReviewPrompt(options.customPoints, options.stance) },
             { role: 'user', content: `请审核以下合同内容：\n\n${contractText}` }
         ];
-
-        // Claude 不使用 system role，将其合并到 user message
-        if (this.config.provider === 'claude') {
-            messages[1].content = messages[0].content + '\n\n' + messages[1].content;
-            messages.shift();
-        }
 
         try {
             const response = await fetch(this.getEndpoint(), {
@@ -275,19 +343,7 @@ ${contractText.substring(0, 8000)}
 
         this.abortController = new AbortController();
 
-        // Claude 格式调整
-        let apiMessages = [...messages];
-        if (this.config.provider === 'claude') {
-            // 合并 system 到第一个 user
-            const systemMsg = apiMessages.find(m => m.role === 'system');
-            if (systemMsg) {
-                const firstUserIdx = apiMessages.findIndex(m => m.role === 'user');
-                if (firstUserIdx >= 0) {
-                    apiMessages[firstUserIdx].content = systemMsg.content + '\n\n' + apiMessages[firstUserIdx].content;
-                }
-                apiMessages = apiMessages.filter(m => m.role !== 'system');
-            }
-        }
+        const apiMessages = [...messages];
 
         try {
             const response = await fetch(this.getEndpoint(), {

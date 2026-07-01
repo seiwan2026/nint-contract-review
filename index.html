@@ -18,153 +18,368 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-left">
-            <div class="logo">⚖️</div>
-            <h1>合同智能审核助手</h1>
-        </div>
-        <div class="header-right">
-            <button class="btn-config" id="btnConfig" title="API 配置">
-                <span>⚙️</span> API 配置
-            </button>
-        </div>
-    </header>
+    <!-- App Container -->
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-logo">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="m9 12 2 2 4-4"/>
+                </svg>
+                <span class="logo-text">法务助手</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-page="workbench" title="工作台">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="7" height="9" x="3" y="3" rx="1"/>
+                        <rect width="7" height="5" x="14" y="3" rx="1"/>
+                        <rect width="7" height="9" x="14" y="12" rx="1"/>
+                        <rect width="7" height="5" x="3" y="16" rx="1"/>
+                    </svg>
+                    <span class="nav-text">工作台</span>
+                </a>
+                <a href="#" class="nav-item" data-page="config" title="审核配置">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <span class="nav-text">审核配置</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" class="nav-item" data-page="settings" title="设置">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <span class="nav-text">设置</span>
+                </a>
+            </div>
+        </aside>
 
-    <!-- API Config Panel -->
-    <div class="config-panel" id="configPanel">
-        <div class="config-content">
-            <h3>🔑 AI API 配置</h3>
-            <div class="form-group">
-                <label>模型提供商</label>
-                <select id="providerSelect">
-                    <option value="openai">OpenAI (GPT-4)</option>
-                    <option value="claude">Claude (Anthropic)</option>
-                    <option value="custom">自定义 OpenAI 兼容接口</option>
-                </select>
-            </div>
-            <div class="form-group" id="customEndpointGroup" style="display:none;">
-                <label>自定义接口地址</label>
-                <input type="text" id="customEndpoint" placeholder="https://api.example.com/v1/chat/completions">
-            </div>
-            <div class="form-group">
-                <label>API Key</label>
-                <input type="password" id="apiKeyInput" placeholder="sk-... 或 你的 API Key">
-                <small>Key 仅保存在浏览器本地，不会上传到任何服务器</small>
-            </div>
-            <div class="form-group">
-                <label>模型名称</label>
-                <input type="text" id="modelInput" placeholder="默认: gpt-4 / claude-3-sonnet">
-            </div>
-            <div class="config-actions">
-                <button class="btn-primary" id="btnSaveConfig">保存配置</button>
-                <button class="btn-secondary" id="btnCloseConfig">取消</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Upload Section -->
-    <section class="upload-section" id="uploadSection">
-        <div class="upload-area" id="uploadArea">
-            <div class="upload-icon">📄</div>
-            <h2>上传合同文件</h2>
-            <p>支持 .docx、.pdf 格式，拖拽文件到此处或点击上传</p>
-            <input type="file" id="fileInput" accept=".docx,.pdf" hidden>
-            <button class="btn-primary btn-upload" id="btnUpload">选择文件</button>
-            <div class="upload-formats">
-                <span class="format-tag">.docx</span>
-                <span class="format-tag">.pdf</span>
-            </div>
-        </div>
-    </section>
-
-    <!-- Preview Section -->
-    <section class="preview-section" id="previewSection" style="display:none;">
-        <!-- Toolbar -->
-        <div class="preview-toolbar">
-            <div class="toolbar-left">
-                <button class="btn-tool" id="btnBack">← 返回上传</button>
-                <span class="filename" id="filenameDisplay"></span>
-            </div>
-            <div class="toolbar-right">
-                <button class="btn-tool btn-review" id="btnStartReview" title="开始 AI 审核">
-                    🤖 开始审核
-                </button>
-                <button class="btn-tool btn-stop" id="btnStopReview" style="display:none;" title="停止审核">
-                    ⏹ 停止
-                </button>
-            </div>
-        </div>
-
-        <!-- Split View -->
-        <div class="split-view">
-            <!-- Left: Original -->
-            <div class="panel panel-left">
-                <div class="panel-header">
-                    <span class="panel-title">📄 原始合同</span>
-                    <span class="panel-badge" id="originalBadge"></span>
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Top Header -->
+            <header class="top-header">
+                <h2 class="page-title" id="pageTitle">工作台</h2>
+                <div class="header-actions">
+                    <div class="api-status" id="apiStatus">
+                        <span class="status-dot" id="statusDot"></span>
+                        <span class="status-text" id="statusText">未配置 API</span>
+                    </div>
                 </div>
-                <div class="panel-content" id="originalContent">
-                    <div class="placeholder-text">合同内容将显示在这里</div>
-                </div>
-            </div>
+            </header>
 
-            <!-- Resize Handle -->
-            <div class="resize-handle" id="resizeHandle"></div>
+            <!-- Page: Workbench -->
+            <div class="page page-workbench active" id="pageWorkbench">
+                <div class="workbench-layout">
+                    <!-- Left Panel: Upload & Control -->
+                    <div class="workbench-left">
+                        <!-- Upload Card -->
+                        <div class="card upload-card" id="uploadCard">
+                            <div class="card-header">
+                                <h3>上传合同</h3>
+                                <p class="card-desc">支持 .docx、.pdf 格式</p>
+                            </div>
+                            <div class="upload-zone" id="uploadZone">
+                                <input type="file" id="fileInput" accept=".docx,.pdf" hidden>
+                                <svg class="upload-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" x2="12" y1="3" y2="15"/>
+                                </svg>
+                                <p class="upload-text">拖拽文件到此处</p>
+                                <p class="upload-sub">或 <span class="upload-link">点击选择文件</span></p>
+                            </div>
+                            <div class="file-info" id="fileInfo" style="display:none;">
+                                <div class="file-row">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                    </svg>
+                                    <span class="file-name" id="fileName"></span>
+                                    <span class="file-size" id="fileSize"></span>
+                                </div>
+                                <button class="btn-text" id="btnChangeFile">更换文件</button>
+                            </div>
+                        </div>
 
-            <!-- Right: AI Review -->
-            <div class="panel panel-right">
-                <div class="panel-header">
-                    <span class="panel-title">🤖 AI 审核意见</span>
-                    <span class="panel-badge" id="reviewBadge">等待审核</span>
-                </div>
-                <div class="panel-content" id="reviewContent">
-                    <div class="placeholder-text">
-                        <div>点击「开始审核」按钮，AI 将分析合同并给出修改建议</div>
-                        <div class="review-tips">
-                            <strong>审核要点：</strong>
-                            <ul>
-                                <li>合同主体信息完整性</li>
-                                <li>权利义务条款对等性</li>
-                                <li>违约责任明确性</li>
-                                <li>争议解决条款合理性</li>
-                                <li>隐藏风险条款识别</li>
-                                <li>付款/交付条款清晰度</li>
-                            </ul>
+                        <!-- Review Control Card -->
+                        <div class="card control-card" id="controlCard">
+                            <div class="card-header">
+                                <h3>审核控制</h3>
+                            </div>
+                            <div class="control-body">
+                                <div class="control-buttons">
+                                    <button class="btn-main" id="btnStartReview" disabled>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <polygon points="10 8 16 12 10 16 10 8"/>
+                                        </svg>
+                                        开始审核
+                                    </button>
+                                    <button class="btn-main btn-stop" id="btnStopReview" style="display:none;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <rect x="9" y="9" width="6" height="6"/>
+                                        </svg>
+                                        停止审核
+                                    </button>
+                                    <button class="btn-secondary" id="btnDownloadReview" disabled>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                            <polyline points="7 10 12 15 17 10"/>
+                                            <line x1="12" x2="12" y1="15" y2="3"/>
+                                        </svg>
+                                        下载审核结果
+                                    </button>
+                                    <button class="btn-secondary" id="btnClearPreview">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        清空预览
+                                    </button>
+                                </div>
+                                <div class="review-progress" id="reviewProgress" style="display:none;">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="progressFill"></div>
+                                    </div>
+                                    <span class="progress-text">AI 正在分析...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Review Points Card -->
+                        <div class="card points-card">
+                            <div class="card-header">
+                                <h3>审核要点</h3>
+                                <p class="card-desc">选择合同类型和审核立场，AI 将按以下要点进行审核</p>
+                            </div>
+                            <div class="points-body">
+                                <div class="points-selectors">
+                                    <div class="selector-group">
+                                        <label class="selector-label">合同类型</label>
+                                        <select id="contractTypeSelect" class="form-select">
+                                            <option value="purchase">采购合同</option>
+                                            <option value="service">服务合同</option>
+                                            <option value="advertising">推广投放合同</option>
+                                            <option value="lease">租赁合同</option>
+                                            <option value="general">通用合同</option>
+                                        </select>
+                                    </div>
+                                    <div class="selector-group">
+                                        <label class="selector-label">审核立场</label>
+                                        <select id="reviewStanceSelect" class="form-select">
+                                            <option value="party_a">甲方（委托方）</option>
+                                            <option value="party_b">乙方（被委托方 / 供应商）</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <textarea id="workbenchPoints" class="points-textarea" rows="8" placeholder="输入审核要点，每行一条...
+例如：
+1. 主体信息完整性
+2. 权利义务对等性
+3. 违约责任明确性"></textarea>
+                                <div class="points-actions">
+                                    <button class="btn-text" id="btnResetPoints">恢复默认</button>
+                                    <button class="btn-text btn-text-primary" id="btnSavePoints">保存要点</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel: Split Preview -->
+                    <div class="workbench-right">
+                        <!-- Column: Original Contract -->
+                        <div class="split-column" id="splitOriginal">
+                            <div class="split-column-header">
+                                <h3>原始合同</h3>
+                                <span class="split-badge badge-original" id="originalBadge">未上传</span>
+                            </div>
+                            <div class="split-column-body" id="originalBody">
+                                <div class="empty-state">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                    </svg>
+                                    <p>请先上传合同文件</p>
+                                    <span class="empty-hint">支持 .docx、.pdf 格式</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Column: Review Opinion -->
+                        <div class="split-column" id="splitReview">
+                            <div class="split-column-header">
+                                <h3>审核意见</h3>
+                                <span class="split-badge" id="reviewBadge">等待审核</span>
+                            </div>
+                            <div class="split-column-body" id="reviewBody">
+                                <div class="empty-state">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                        <path d="m9 12 2 2 4-4"/>
+                                    </svg>
+                                    <p>AI 审核结果将显示在这里</p>
+                                    <span class="empty-hint">上传文件后点击「开始审核」</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
 
-    <!-- Floating Chat Assistant -->
-    <div class="chat-widget" id="chatWidget">
-        <div class="chat-header" id="chatHeader">
-            <span>💬 AI 助手</span>
-            <div class="chat-controls">
-                <button class="chat-btn" id="chatMinimize">−</button>
-                <button class="chat-btn" id="chatClose">×</button>
+            <!-- Page: Config -->
+            <div class="page page-config" id="pageConfig">
+                <div class="config-layout">
+                    <div class="config-left">
+                        <div class="card config-card">
+                            <div class="card-header">
+                                <h3>AI 模型配置</h3>
+                                <p class="card-desc">配置大模型 API，所有信息仅保存在本地浏览器</p>
+                            </div>
+                            <div class="form-body">
+                                <div class="form-row">
+                                    <label>模型提供商</label>
+                                    <select id="providerSelect" class="form-select">
+                                        <option value="deepseek">DeepSeek</option>
+                                        <option value="kimi">Kimi (Moonshot)</option>
+                                        <option value="volcano">火山引擎 (豆包 / Doubao)</option>
+                                        <option value="siliconflow">硅基流动 (SiliconFlow)</option>
+                                        <option value="custom">自定义 OpenAI 兼容接口</option>
+                                    </select>
+                                </div>
+                                <div class="form-row" id="customEndpointRow" style="display:none;">
+                                    <label>自定义接口地址</label>
+                                    <input type="text" id="customEndpoint" class="form-input" placeholder="https://api.example.com/v1/chat/completions">
+                                </div>
+                                <div class="form-row">
+                                    <label>API Key</label>
+                                    <div class="input-with-icon">
+                                        <input type="password" id="apiKeyInput" class="form-input" placeholder="sk-... 或你的 API Key">
+                                        <button class="btn-eye" id="btnToggleKey" type="button">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                                                <circle cx="12" cy="12" r="3"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <p class="form-hint">Key 仅保存在浏览器本地，不会上传到任何服务器</p>
+                                </div>
+                                <div class="form-row">
+                                    <label>模型名称 <span class="label-optional">可选</span></label>
+                                    <input type="text" id="modelInput" class="form-input" placeholder="留空使用默认模型">
+                                </div>
+                                <div class="form-actions">
+                                    <button class="btn-main" id="btnSaveConfig">保存配置</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="config-right">
+                        <div class="card info-card">
+                            <div class="card-header">
+                                <h3>配置说明</h3>
+                            </div>
+                            <div class="info-body">
+                                <div class="info-section">
+                                    <h4>DeepSeek</h4>
+                                    <p>支持 DeepSeek-V3、DeepSeek-R1、DeepSeek-Coder 等模型。接口与 OpenAI 兼容。</p>
+                                    <a href="https://platform.deepseek.com/api_keys" target="_blank" class="info-link">获取 API Key →</a>
+                                </div>
+                                <div class="info-section">
+                                    <h4>Kimi (Moonshot)</h4>
+                                    <p>支持 Moonshot-v1-8k/32k/128k 系列模型。接口与 OpenAI 兼容。</p>
+                                    <a href="https://platform.moonshot.cn/console/api-keys" target="_blank" class="info-link">获取 API Key →</a>
+                                </div>
+                                <div class="info-section">
+                                    <h4>火山引擎 (豆包)</h4>
+                                    <p>支持 Doubao-pro、Doubao-lite、Doubao-vision 等模型。接口与 OpenAI 兼容。</p>
+                                    <a href="https://console.volcengine.com/ark/" target="_blank" class="info-link">获取 API Key →</a>
+                                </div>
+                                <div class="info-section">
+                                    <h4>硅基流动 (SiliconFlow)</h4>
+                                    <p>聚合平台，支持多种开源/闭源大模型。接口与 OpenAI 兼容。</p>
+                                    <a href="https://cloud.siliconflow.cn/account/ak" target="_blank" class="info-link">获取 API Key →</a>
+                                </div>
+                                <div class="info-section">
+                                    <h4>自定义接口</h4>
+                                    <p>支持任何兼容 OpenAI API 格式的第三方服务，如 Azure、Gemini 等。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <!-- Page: Settings -->
+            <div class="page page-settings" id="pageSettings">
+                <div class="settings-layout">
+                    <div class="card settings-card">
+                        <div class="card-header">
+                            <h3>通用设置</h3>
+                        </div>
+                        <div class="settings-body">
+                            <div class="setting-row">
+                                <div class="setting-info">
+                                    <label>清空本地数据</label>
+                                    <p class="setting-desc">清除保存的 API Key 和聊天记录</p>
+                                </div>
+                                <button class="btn-secondary" id="btnClearData">清空数据</button>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-info">
+                                    <label>关于</label>
+                                    <p class="setting-desc">合同智能审核助手 v1.0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 悬浮桌宠 + 可展开对话框 -->
+    <div class="chat-mascot-wrapper" id="chatMascotWrapper">
+        <!-- 桌宠图标（始终可见） -->
+        <div class="chat-mascot" id="chatMascot">
+            <div class="mascot-body">
+                <span class="mascot-emoji">🐱</span>
+            </div>
+            <div class="mascot-glow"></div>
         </div>
-        <div class="chat-body" id="chatBody">
-            <div class="chat-messages" id="chatMessages"></div>
-            <div class="chat-input-area">
-                <textarea id="chatInput" placeholder="针对合同内容提问..." rows="2"></textarea>
-                <button class="btn-send" id="btnSend">发送</button>
+        <!-- 对话框（hover 时展开） -->
+        <div class="chat-panel" id="chatPanel">
+            <div class="chat-header" id="chatHeader">
+                <div class="chat-header-left">
+                    <span>AI 助手</span>
+                </div>
+                <span class="chat-status" id="chatStatus">通用对话</span>
+            </div>
+            <div class="chat-body">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-welcome">👋 你好！我是 AI 法律助手，有什么可以帮你的？</div>
+                </div>
+                <div class="chat-input-wrap">
+                    <textarea id="chatInput" placeholder="问我任何问题..." rows="1"></textarea>
+                    <button class="btn-chat-send" id="btnSend">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Chat Toggle Button (shown when chat minimized) -->
-    <button class="chat-toggle" id="chatToggle" style="display:none;">
-        💬 AI 助手
-    </button>
-
-    <!-- Toast Notification -->
+    <!-- Toast -->
     <div class="toast" id="toast"></div>
 
-    <!-- Loading Overlay -->
+    <!-- Loading -->
     <div class="loading-overlay" id="loadingOverlay" style="display:none;">
         <div class="loading-spinner"></div>
         <p id="loadingText">正在解析文件...</p>
