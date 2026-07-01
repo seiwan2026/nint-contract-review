@@ -141,33 +141,49 @@
     function linkClauseReferences(container) {
         if (!container) return;
 
-        const originalBody = document.getElementById('contractOriginalText');
+        var originalBody = document.getElementById('contractOriginalText');
         if (!originalBody) return;
 
         // 收集原始合同中所有锚点
-        const anchors = originalBody.querySelectorAll('.clause-anchor');
+        var anchors = originalBody.querySelectorAll('.clause-anchor');
         if (anchors.length === 0) return;
 
-        // 构建条款编号 → 锚点ID 的映射
-        // e.g. "第一条" → "clause-1"
-        const clauseMap = {};
-        const chineseNums = '一二三四五六七八九十百千';
+        // 构建条款编号 -> 锚点 ID 映射
+        var clauseMap = {};
+        var chineseNums = { '一':'1','二':'2','三':'3','四':'4','五':'5','六':'6','七':'7','八':'8','九':'9','十':'10' };
         anchors.forEach(function(anchor, i) {
             var text = anchor.textContent.trim();
-            // 提取条款编号
             var match = text.match(/第([一二三四五六七八九十百千\d]+)[条章]/);
             if (match) {
                 clauseMap[match[1]] = anchor.id;
+                // 也存阿拉伯数字版本
+                var arabic = chineseNums[match[1]] || match[1];
+                clauseMap[arabic] = anchor.id;
             }
-            // 也存数字索引
             clauseMap[String(i + 1)] = anchor.id;
         });
 
-        // 递归遍历审核意见中的文本节点，为条款引述包裹链接
+        // 1. 处理 .review-clause-ref 元素（卡片头部的条款引述）
+        var clauseRefs = container.querySelectorAll('.review-clause-ref');
+        clauseRefs.forEach(function(ref) {
+            var text = ref.textContent.trim();
+            var regex = /第([一二三四五六七八九十百千\d]+)条/;
+            var m = text.match(regex);
+            if (m && clauseMap[m[1]]) {
+                ref.style.cursor = 'pointer';
+                ref.style.color = '#6366f1';
+                ref.style.textDecoration = 'underline';
+                ref.title = '点击跳转到原始合同对应条款';
+                ref.addEventListener('click', function() {
+                    scrollToClause(m[1]);
+                });
+            }
+        });
+
+        // 2. 递归遍历文本节点，为条款引述包裹链接
         function processNode(node) {
             if (node.nodeType === Node.TEXT_NODE) {
                 var text = node.textContent;
-                // 匹配条款引述：第X条、第X.X条，但不匹配已在链接内的
                 if (/第[一二三四五六七八九十百千\d]+条/.test(text)) {
                     var fragment = document.createDocumentFragment();
                     var lastIdx = 0;

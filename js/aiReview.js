@@ -141,12 +141,25 @@ ${stanceInstructions}
 简要评价合同整体质量、风险等级（高/中/低）
 
 ### 二、逐条审核意见
-每条意见使用以下格式（请不要输出完整的原文段落，只引用条款序号）：
+使用卡片格式输出。每条意见严格按以下 HTML 结构输出：
 
-**条款：第X条（条款名称）**
-- **【风险】**：发现的问题或风险点
-- **【建议】**：建议修改后的文本（如有）
-- **【依据】**：相关法律依据或风险说明
+<div class="review-card" data-risk="高">
+<div class="review-card-header">
+<span class="risk-badge risk-high">高风险</span>
+<span class="review-clause-ref">第X条（条款名称）</span>
+</div>
+<div class="review-card-body">
+- **风险**：发现的问题或风险点
+- **建议**：建议修改后的文本（如有）
+- **依据**：相关法律依据或风险说明
+</div>
+</div>
+
+注意：
+- data-risk 取值：高、中、低
+- risk-badge 对应 class：risk-high（红）、risk-medium（黄）、risk-low（绿）
+- 条款引述用 <span class="review-clause-ref"> 包裹
+- 如果某条意见没有明确条款对应，可使用 "通用条款"
 
 ### 三、修改建议汇总
 列出建议修改的核心条款清单
